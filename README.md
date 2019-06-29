@@ -20,10 +20,10 @@ Applied Text based Product similarity techniques like on <Strong><i>"title"</i><
 <li>IDF</li>
 <li>Average-Word2Vec</li>
 <li>TF-IDF weighted Word2Vec</li>
-<li>IDF Weighted Word2Vec</li>
+<li>IDF weighted Word2Vec</li>
   </ul>
 
-Combined the above techniques with <Strong><i>"brand"</i></Strong> and <Strong><i>"color"</i></Strong> features to achive product similarity based on "Brand" and "Color" by tweaking the weights for every feature.<br>
+Combined the above techniques with <Strong><i>"brand"</i></Strong> and <Strong><i>"color"</i></Strong> features to achieve product similarity based on "Brand" and "Color" by tweaking the weights for every feature.<br>
 
 Applied CNN for finding Image-based product similarities<br>
 Converted the product images using <strong>VGG-16</strong> CNN for image feature extraction.<br>
