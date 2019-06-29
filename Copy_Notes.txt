@@ -1,0 +1,465 @@
+Amazon Product API
+==================
+Python Setup
+Data Aquisition----From Amzon Product API
+Data Cleaning
+Text Pre-Processing
+Linear Zebra
+Text Based Product recommendations
+	BOW
+	Word2Vec
+	TF-IDF
+Image Based---Deep Learning
+A/B testing(to know which solution is good in real world)
+=============================================================
+1.Data Aquisition with Amazon Advertising API(in a policy complaint manner)
+	Get data for womens tops--1,83,000 products
+    we need to get data from AWS 
+	AWSAccessKeyID
+	AssociateTag
+======================================
+AppliedAIworkshop.ipynb
+dedupe-contans images(we will perform some data cleaning on them)
+pickels-python files
+tops_fashion.json--->
+word2vec_model--50MB
+======================================
+Number of data points----183138
+Number of features-19
+==============================
+Among those 19 features we will limit to only 6 features
+1.Asin-(Amazon Standard Identifcation Number-Unique identifier)
+2.Brand-(Brand to which the product belongs to)
+3.Color-(Color information of apparel Ex:Red ,Black,Stripes)
+4.Product_Type_name(type of apparel Ex:Shirt,TShirt)
+5.Medium_image_url(url of the image show in medium size)
+6.Title-(Title of the Product)-Short and very informative 
+7.Formatted_price-(price of the product)
+===================================
+Color-We noticed that for "Color" some values were kept as "None" 
+Formatted_Price-Some values were kept as "None"
+====================================
+Data Cleaning and Understanding:
+Using pandas "describe()" for "Product_type_name" column:
+
+"Product_type_name" was presnt in all the columns-183138
+Total number of Unique products-72
+top products-SHIRT
+frequency-16,7794
+percentage of shirts=167794/183138=91.62%
+=====================================
+finding unique product using pandas "unique()"--72
+=====================================
+find the top 10 most "product_types_names"
+Using cnt=Counter(list(data['product_type_name']))
+cnt.most_common(10)
+[('SHIRT', 167794),
+ ('APPAREL', 3549),
+ ('BOOKS_1973_AND_LATER', 3336),----->not related to our data
+ ('DRESS', 1584),
+ ('SPORTING_GOODS', 1281),
+ ('SWEATER', 837),
+ ('OUTERWEAR', 796),
+ ('OUTDOOR_RECREATION_PRODUCT', 729),
+ ('ACCESSORY', 636),
+ ('UNDERWEAR', 425)]
+=============================================
+Similarly analyzing data for brand
+brand->describe()
+count     182987, so 183138-182987=151 values were missing
+unique     10577
+top         Zago
+freq         223
+Name: brand, dtype: object
+
+brand_count = Counter(list(data['brand']))
+brand_count.most_common(10)
+
+[('Zago', 223),
+ ('XQS', 222),
+ ('Yayun', 215),
+ ('YUNY', 198),
+ ('XiaoTianXin-women clothes', 193),
+ ('Generic', 192),
+ ('Boohoo', 190),
+ ('Alion', 188),
+ ('Abetteric', 187),
+ ('TheMogan', 187)]
+=================================
+For color
+color.describe()
+
+count     64956
+unique     7380
+top       Black
+freq      13207
+Name: color, dtype: object
+
+# we have 7380 unique colors
+# 7.2% of products are black in color
+# 64956 of 183138 products have brand information. That's approx 35.4%.
+
+color_count = Counter(list(data['color']))
+color_count.most_common(10)
+
+[(None, 118182),
+ ('Black', 13207),
+ ('White', 8616),
+ ('Blue', 3570),
+ ('Red', 2289),
+ ('Pink', 1842),
+ ('Grey', 1499),
+ ('*', 1388),--illogical
+ ('Green', 1258),
+ ('Multi', 1203)]
+===================================================
+for formatted_price
+['formatted_price'].describe())
+
+count      28395
+unique      3135
+top       $19.99
+freq         945
+Name: formatted_price, dtype: object
+
+# Only 28,395 (15.5% of whole data) products with price information
+price_count = Counter(list(data['formatted_price']))
+price_count.most_common(10)
+
+[(None, 154743),
+ ('$19.99', 945),
+ ('$9.99', 749),
+ ('$9.50', 601),
+ ('$14.99', 472),
+ ('$7.50', 463),
+ ('$24.99', 414),
+ ('$29.99', 370),
+ ('$8.99', 343),
+ ('$9.01', 336)]
+==================================
+data['title'].describe()--most important feature
+
+count                                                183138
+unique                                               175985
+top       Nakoda Cotton Self Print Straight Kurti For Women
+freq                                                     77
+
+Name: title, dtype: object
+# All of the products have a title. 
+# Titles are fairly descriptive of what the product is. 
+# We use titles extensively in this workshop 
+# as they are short and informative.
+===============================================
+pickle-storing a data variable to a hard disk
+data.to_pickle('pickle/filename')
+================================================
+if we operate on 183k points it will take a fair amount of time so thought of operating on less amount of data 
+so instead of deleting important data need to identify the datapoints where some values were null.
+Price:
+data = data.loc[~data['formatted_price'].isnull()]---loc function is used to select rows based on some conditionl statement or by label
+print('Number of data points After eliminating price=NULL :', data.shape[0])
+
+Number of data points After eliminating price=NULL : 28395
+=======================================
+Color:
+
+data =data.loc[~data['color'].isnull()]
+print('Number of data points After eliminating color=NULL :', data.shape[0])
+
+Number of data points After eliminating color=NULL : 28385
+========================================================
+we will operate on this 28385 data points
+ At every key stage we will store the data in a pickle file for ease of use.
+
+data.to_pickle('pickels/28k_apparel_data')-->183k---------->28k
+=====================================
+we dont have image data but we have the image url in out data set.
+====================================================
+Remove duplicates items.
+load 28k pickle file.
+=============================
+Question:Find the no fo products have duplicate titles
+Sum(data.duplicated('title'))--for pandas data frame we  have duplicated function (return boolean arry T,F,T,F)to get duplicate rows.
+=========================================
+we need to de-dupe the duplicate products with same titles for better recommendations
+=================================================
+Remove products contain few words so remove all those titles <5 
+
+data_sorted = data[data['title'].apply(lambda x: len(x.split())>4)]
+print("After removal of products with short description:", data_sorted.shape[0])
+
+After removal of products with short description: 27949
+=================================================
+Sort all the products based on title (alphabetical order)
+data_sorted.sort_values('title',inplace=True, ascending=False)
+data_sorted.head()
+=======================
+Titles 1:
+16. woman's place is in the house and the senate shirts for Womens XXL White
+17. woman's place is in the house and the senate shirts for Womens M Grey
+
+Title 2:
+25. tokidoki The Queen of Diamonds Women's Shirt X-Large
+26. tokidoki The Queen of Diamonds Women's Shirt Small
+27. tokidoki The Queen of Diamonds Women's Shirt Large
+
+Title 3:
+61. psychedelic colorful Howling Galaxy Wolf T-shirt/Colorful Rainbow Animal Print Head Shirt for woman Neon Wolf t-shirt
+62. psychedelic colorful Howling Galaxy Wolf T-shirt/Colorful Rainbow Animal Print Head Shirt for woman Neon Wolf t-shirt
+63. psychedelic colorful Howling Galaxy Wolf T-shirt/Colorful Rainbow Animal Print Head Shirt for woman Neon Wolf t-shirt
+64. psychedelic colorful Howling Galaxy Wolf T-shirt/Colorful Rainbow Animal Print Head Shirt for woman Neon Wolf t-shirt
+=================================
+When all of the words in a sentence is same except for the last few words we will remove those data points
+Title1-i
+Title2-j
+Title3
+Above titles were sorted so all the titles with simlar starting were grouped together
+we need to get all the words in Title1 and place it in a Set(unique)-->set1
+we need to get all the words in  Title2 and place it in a Set(unique--->set2
+Perform the set difference of set1 and set2
+ if the difference is <3 words the we will remove those datapoints
+===============================
+After  removing the titles which differ in the last few words  we were left with 17593 datapoints
+====================================
+In the previous cell, we sorted whole data in alphabetical order of  titles.Then, we removed titles which are adjacent and very similar title
+
+But there are some products whose titles are not adjacent but very similar.
+
+Examples:
+
+Titles-1
+86261.  UltraClub Women's Classic Wrinkle-Free Long Sleeve Oxford Shirt, Pink, XX-Large
+115042. UltraClub Ladies Classic Wrinkle-Free Long-Sleeve Oxford Light Blue XXL
+
+TItles-2
+75004.  EVALY Women's Cool University Of UTAH 3/4 Sleeve Raglan Tee
+109225. EVALY Women's Unique University Of UTAH 3/4 Sleeve Raglan Tees
+120832. EVALY Women's New University Of UTAH 3/4-Sleeve Raglan Tshirt
+=================================================
+code for removing th near duplicate title records like the above records.
+Algorithm working:
+Title1
+Title2
+Title3.
+.
+.
+.
+
+For every pair of titles find how many words they differ<k words.
+so the code takes a significant amount of time due to brute force approach, we can use inverted indexes(Advanced data structure) to compute different words.
+============================================================
+After the above procedure we will left with 16k data points.
+store it to pickle file
+====================================
+Apply Text Preprocessing techniques.
+NLTK--nltk.download()-->install stopwords from corpora
+For every title apply below steps
+1.Stop Word removal.
+Stop_words=set(stopwords('english'))--if,for,the,why etc.....
+2.special characters remover
+join(e for e in words if e.isalnum()
+3.convert all the words to lower case.
+========================
+pickle it.
+=====================================
+Stemming---fisher,fishing--->root word is fish
+from nltk.stem.porter import PorterStemmer
+stemmer=PorterStemmer()
+stemmer.stem('arguing')-->argu
+stemmer.stem('fishing')-->fish
+For our problem stemming didnt worked well
+=========================================
+Text based product similarity
+wrote utility functions
+disply_img()
+plot_heatmap()-->plotting code to understand the algorithm's decision.
+plot_heatmap_image()
+text_to_vector()
+get_result()
+=========================================================
+Bag of Words(BoW) on product titles.
+from sklearn.feature_extraction.text import CountVectorizer---takes a sentence and gives a vector of how ofter every word occured in a sentence
+title_vector=CountVectorizer()
+title_features=title_vector.fit_transform(data['title'])
+title_features.get_shape()--->(16042,12609)--most of the values in this matrix will be zeros(sparse vectors)
+repesent this non zero vector into Sparse matrix representstion
+row,column,value------->Ex:n,m,Vn,m
+================================
+Bag of Words similarity:
+bag_of_words_model(id,no_of_results){
+Calculate pairwise_distances  from scikit learn using defailt eculedian distance metric.
+sort the smallest distances based on the number no_of_results
+
+Title1:0,1,0,2,0,1,0
+
+Title2:0,2,0,1,1
+Eucledian distance=square root of distance between the two titles vectors
+if both will be similar then distance will be low.
+================================================
+TF-IDF based Text Vectorization
+TF-Term Frequency
+IDF-Inverse Document Frequency
+
+Title1---(document)
+Title2---(document)==================>corpus
+Title3---(document)
+Title4-----(document)
+
+TF-computed between given word and a given document
+No of times a word occurs in my text /No of words in text
+TF will be high if it occurs more times in a document.
+
+IDF-for a given word in whole document corpus.
+LOG(no of documents in a corpus/no of documents in the corpus which contain the given word)
+IDF-it messures how rare a word is in the document
+IDF for a word increases if a word is rare
+
+Put these 2 concepts and build a TF-IDF vector.
+Word1--------->TF(word,Text)*IDF(document/no of times a word occur in  a document)
+for each word calculate TF-IDF and place it in the word vector rest of th words will be zero
+TF-IDF is high when both will be high
+TF-IDF will give larger values for less frequent words in a corpus.
+====================================================
+tfidf_vectorizer=TfidfVectorizer()--scikit learn
+tfidf_featurizer=tfidf_vectorizer.fit_transform(data['title'])--it will gives a sparse matrix for all the titles
+calculate the eucledian distance
+sort by smallest distances.
+plot the results.
+Black color represent words which were not present in the query title
+=============================
+IDF Based Product Similarity.
+Drawback with TF-IDF:
+In a long text if every word was unique TF will be smaller when compared to the text which contains less words even though every word was unique, so we are giving an edge to the smaller text which was not fair.
+TF-IDF was designed for search engines and parsing large documents which it it work well,but our titles were no of words were ostly less than<20
+so we can drop TF and experiment with IDF
+explicitly implement IDF and use CountVectorizer from scikit learn to build Vector
+IDF  was not well when compared with TF-IDF
+========================================
+Text Semantics based product similarity
+If we want to use Word2Vec using our own text data if we have lots of data use gensim.model import wo 
+took google news data  from google corpus and built a dictionary for our 12K words--->word2vec_model(pikle).
+utility funcs for Average Word2Vec
+word to vec build
+calculate distance
+heat map plot
+sum all the wod2 vec and took average word2vec  
+heat map shows if distance is small they will relate 
+===================================================
+Using TF-IDF weighted Word2Vec(it considers word importance+Semantic Similarity)
+Title1:300 Dim vector multiply with TF-IDF
+Title2:300 Dim vector multiply with TF-IDF
+Title3:300 Dim vector multiply with TF-IDF
+
+Sum up all the Word2Vecs*1/N(no of words)
+=================================================
+IDF weighted Word2Vec:
+compute our own IDF 
+same steps as TF-IDF
+===============================
+Among all the above methods we applied how can we know that which one is best suit for our requirement?
+We will use A/B testing to find the best method among all of the above
+===============================================
+Currently in all the above methods we used "title" for finding product similarity
+Now we will try similarity using Brand and Color in addition to "Title"
+
+Compute  IDF weighted W2V for Title
+Compute  IDF weighted W2V for Brand--->Create  a vector with  unique brands and set the value to 1 for the product and rest of the colums to zero(One Hot Encoding) 
+Compute  IDF weighted W2V for Color----->Create  a vector with  unique colors and set the value to 1 for the product and rest of the colums to zero(One Hot Encoding) 
+ 
+Concatenate all the above 3 Vectors
+Title--300 dim
+Brand----M dim
+Color----K dim
+|Title|Brand|Color|---final product vector
+Compute simple Eucledian distance for finding product similarity
+Lets assume:
+Prefer showing our customers products of same brand.
+Prefer showing our customers products of same color.
+Can you modify out simple Eucledian distance to meet our requirement?
+We can use weighted  Eucledian distance to  achieve this
+|Weigth*(Title) | Weight*(Brand) | Weight*Color| and calculate eucledian distance.
+Weight for Title-->1
+Weight for Brand--->6
+Weight for Color----->7
+we will give much preference to Brand.
+============================================
+Weighted similarity sing Brand and Color
+Replaces spaces,hypens in band, product_type, color
+use CountVectorizer() from Sklearn to convert into one hot encoding
+heat map code
+C1=compute IDF-W2V distance--using pairwise_distances
+C2=extrafeatures distance--->using pairwise_distances
+pairwisedistance =(Weight1*C1+Weight2*C2)/(W1+W2)
+call idf_w2_brabd(idno,idf_weight,brand,color,no of similar products)
+==============================================
+Upto now we tried the below methods
+BagofWords
+TF-IDF
+IDF
+Avg-W2V,
+TF-IDFweighted W2V
+IDF Weighted W2V
+Weighted brand,color 
+Among all the above techniques how to evaluate which ones' better bsed on different factors and constraints of the company
+Consider all the above multiple techiques and  apply bussiness rules on top of it.
+Come up with final recomendations with those rules.
+How do we measure our solution is?----->use A/B Testing.
+==================================================
+Converting an image into a D-Dimensional array------->use CNN(Convolutional Neural Networks)
+VGG-16---->Conv Neural Network--->Image-----25088 dim vector.
+Using TensorFlow and Keras to extract features.
+==================================
+from keras.preprocessing.image import ImageDataGenerator
+Using TensorFlow as backend.
+for each 16k products images convering it into D-dimentional vector it will take much time.
+Build VGG-16 Vector--->take every image and return vector.
+saving all the extracted features in a numpy file as below
+16k_data_cnn_features.npy---->numpy file
+16k_data_cnn_features_asins.npy---->numpy file
+ use this 25088 dimensons to find eucledian distance for product similarity
+ load image file
+load asins file
+load our 16k data pikle file
+
+get_similar_products_cnn(docid,num_of_results)
+use pairwise_distances
+=========================
+A/B Testing--statistical method
+------------------
+we used only one image to predit the similar product but in real worls comanied will test this in millions of products
+not subjectively but quantitatively
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
