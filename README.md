@@ -13,7 +13,7 @@ Data Source:Data  was retrieved from Amazon Product API with Womens tops filter<
 
 Applied Text processing techniques using NLTK like stopword removal,stemming.<br>
 
-Applied Text based Product similarity techniques like on <Strong><i>"title"</i></Strong> feature<br>
+Applied below Text based product similarity techniques on <Strong><i>"title"</i></Strong> feature<br>
 <ul>
   <li>BagofWords</li>
 <li>TF-IDF</li>
